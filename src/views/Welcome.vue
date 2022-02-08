@@ -99,16 +99,22 @@
           <hr class="w-100 my-0">
         </div>
         <div class="clearfix"></div>
-        <div class="col-12">
-          <h3>isAuth: {{isAuth}}</h3>
+        <div class="col-12 col-lg-6 mb-3 text-center">
+          <h3 class="fs-4 mb-3">Own plugins: Auth <b>isAuth: {{isAuth}}</b></h3>
+          <p class="fs-6 text-start">
+            Плагин для авторизации через сервис iny.su.<br>
+            Для подключения писать <a href="https://t.me/yesfedor" target="_blank" rel="noopener noreferrer">https://t.me/yesfedor</a><br>
+            <a href="https://iny.su/auth?app_id=4" target="_blank">Авторизоваться через iny.su</a>
+           </p>
+           <br>
           <p>
             user: <br>
-            <pre>
+            <pre class="text-start">
               {{user}}
             </pre>
           </p>
-          <button class="btn" @click="login()">Войти</button>
-          <button class="btn" @click="logout()">Выйти</button>
+          <button class="btn-primary text-start me-3" @click="login()">Войти</button>
+          <button class="btn-primary text-start" @click="logout()">Выйти</button>
         </div>
       </div>
     </div>
@@ -116,7 +122,7 @@
 </template>
 
 <script>
-import { onMounted, onUnmounted, ref, watchEffect } from '@vue/runtime-core'
+import { onMounted, ref } from '@vue/runtime-core'
 import { useProgress } from '../plugins/hooks'
 import { useAuth, useIsAuth, useUser } from '../plugins/Auth'
 export default {
@@ -139,25 +145,23 @@ export default {
     })
 
     const Api = useAuth()
+    const user = ref({})
     const isAuth = ref(false)
 
-    const isAuthEffect = watchEffect(() => {
-      console.log(isAuth.value)
-      isAuth.value = useIsAuth()
+    useUser(value => {
+      user.value = value
     })
-
-    const user = useUser()
+    useIsAuth(value => {
+      isAuth.value = value
+    })
 
     const login = () => {
       Api.login('yesfedor.go@gmail.com', 'фыв486982фыв')
     }
+
     const logout = () => {
       Api.logout()
     }
-
-    onUnmounted(() => {
-      isAuthEffect()
-    })
 
     return {
       user,

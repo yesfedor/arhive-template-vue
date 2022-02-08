@@ -136,10 +136,8 @@ export const Api = new Proxy({
   },
 
   /* callback alias */
-  router: {
-    push (routeName, routeReason = '') {
-      return Api.config.routerPush(routeName, routeReason)
-    }
+  routerPush (routeName, routeReason = '') {
+    return this.config.routerPush(routeName, routeReason)
   },
 
   /**
@@ -165,10 +163,30 @@ export const Api = new Proxy({
   },
 
   /* user store */
-  user: {
+  user: new Proxy({
+    _listIsAuth: [],
+    _listUser: [],
     isAuth: false,
     data: {}
-  },
+  }, {
+    get (target, key) {
+      return target[key]
+    },
+    set (target, key, value) {
+      if (key === 'isAuth') {
+        target._listIsAuth.forEach(fn => {
+          fn(value)
+        })
+      }
+      if (key === 'data') {
+        target._listUser.forEach(fn => {
+          fn(value)
+        })
+      }
+      target[key] = value
+      return true
+    }
+  }),
 
   /* instance and callback init */
   install (appId, config = {
@@ -201,9 +219,21 @@ export const Api = new Proxy({
       const authParamName = 'auth'
       const searchParams = new URLSearchParams(location.search)
       if (searchParams.get(authParamName)) {
-        // const jwt = searchParams.get(authParamName)
+        const jwt = searchParams.get(authParamName)
+        localStorage.setItem(this.config.localStorageName.jwt, jwt)
+        this.restoreSession()
+        this.routerPush('Current', 'Fix query auth')
       }
     }
+
+    const storageEvent = (event) => {
+      if (event.key === 'jwt') {
+        localStorage.setItem(this.config.localStorageName.jwt, event.newValue)
+        this.restoreSession()
+      }
+    }
+
+    window.addEventListener('storage', storageEvent)
   },
   unmounted () {
     if (this.system.guardInterval) clearInterval(this.system.guardInterval)
@@ -276,7 +306,7 @@ export const Api = new Proxy({
      */
     localStorage.setItem(this.config.localStorageName.jwt, 'logout')
     this.storeCommit('logout', { data: 'logout' })
-    this.router.push('main', 'because the user logged out')
+    this.routerPush('main', 'because the user logged out')
   },
   async refreshJwt () {
     const isAuth = this.storeGetterIsAuth()
@@ -299,6 +329,7 @@ export const Api = new Proxy({
   restoreSession () {
     const jwt = localStorage.getItem(this.config.localStorageName.jwt)
     const userData = this.parseJwt(jwt)
+    if (!userData) this.logout()
     this.setUserObject('login', userData)
   },
   parseJwt (jwt) {
@@ -344,6 +375,9 @@ export const Api = new Proxy({
 }, {
   get (target, prop) {
     return target[prop]
+  },
+  set (target, prop, value) {
+    target[prop] = value
   }
 })
 
@@ -351,10 +385,14 @@ export function useAuth () {
   return Api
 }
 
-export function useUser () {
-  return Api.storeGetterUser()
+export function useUser (_listUser = () => {}) {
+  const user = Api.user.data
+  Api.user._listUser.push(_listUser)
+  _listUser(user)
 }
 
-export function useIsAuth () {
-  return Api.storeGetterIsAuth()
+export function useIsAuth (_listIsAuth = () => {}) {
+  const isAuth = Api.user.isAuth
+  Api.user._listIsAuth.push(_listIsAuth)
+  _listIsAuth(isAuth)
 }
