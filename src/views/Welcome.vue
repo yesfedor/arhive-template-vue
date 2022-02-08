@@ -94,14 +94,31 @@
             <li class="list-group-item">xxl: 1400px 6</li>
           </ul>
         </div>
+        <div class="clearfix"></div>
+        <div class="col-6 mb-3">
+          <hr class="w-100 my-0">
+        </div>
+        <div class="clearfix"></div>
+        <div class="col-12">
+          <h3>isAuth: {{isAuth}}</h3>
+          <p>
+            user: <br>
+            <pre>
+              {{user}}
+            </pre>
+          </p>
+          <button class="btn" @click="login()">Войти</button>
+          <button class="btn" @click="logout()">Выйти</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { onMounted } from '@vue/runtime-core'
+import { onMounted, onUnmounted, ref, watchEffect } from '@vue/runtime-core'
 import { useProgress } from '../plugins/hooks'
+import { useAuth, useIsAuth, useUser } from '../plugins/Auth'
 export default {
   name: 'Welcome',
   setup () {
@@ -121,7 +138,32 @@ export default {
       }, 2000)
     })
 
+    const Api = useAuth()
+    const isAuth = ref(false)
+
+    const isAuthEffect = watchEffect(() => {
+      console.log(isAuth.value)
+      isAuth.value = useIsAuth()
+    })
+
+    const user = useUser()
+
+    const login = () => {
+      Api.login('yesfedor.go@gmail.com', 'фыв486982фыв')
+    }
+    const logout = () => {
+      Api.logout()
+    }
+
+    onUnmounted(() => {
+      isAuthEffect()
+    })
+
     return {
+      user,
+      isAuth,
+      login,
+      logout,
       previewPreloader
     }
   }
